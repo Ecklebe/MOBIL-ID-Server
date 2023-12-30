@@ -12,5 +12,5 @@ gunicorn
 httptools
 uvloop
 google-auth==1.5.1
-requests==2.20.0
+requests>=2.20.0
 enum34
