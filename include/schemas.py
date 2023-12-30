@@ -25,15 +25,29 @@ class User():
 
         self.id = entered_id
         token = utils.AES256()
-        request_URL = 'https://account.oc.edu/mobilepass/details/' + self.id + '?token=' + token.encrypt(self.id + '-' + str(time.time()), config.OC_SHARED_SECRET).hex()
+        request_URL = None
+        if not config.OC_SHARED_SECRET:
+            request_URL = 'https://account.oc.edu/mobilepass/details/' + self.id + '?token=' + token.encrypt(self.id + '-' + str(time.time()), config.OC_SHARED_SECRET).hex()
         
         tries = 3 # number of tries to get new data
         for i in range(tries):
             try:
-                # try GET request
-                r = requests.get(request_URL, timeout=3)
-                # try to parse request body
-                self.data = r.json()
+                if request_URL:
+                    # try GET request
+                    r = requests.get(request_URL, timeout=3)
+                    # try to parse request body
+                    self.data = r.json()
+                else:
+                    json = {}
+                    json['FullName'] = "Hello World"
+                    json['PhotoURL'] = None
+                    json['EagleBucks'] = 0
+                    json['MealsRemaining'] = 0
+                    json['KudosEarned'] = 0
+                    json['KudosRequired'] = 0
+                    json['IDPin'] = entered_pin
+                    json['PrintBalance'] = ""
+                    self.data = json
             except:
                 # exception occured, if tries left then continue trying
                 # else re-raise original exception
@@ -183,10 +197,15 @@ class JWT():
         # parse User data into reusable variables
         user_pass = crud.get_pass(db, serial_number)
 
-        # Add user photo with different device resolution support
-        response = requests.get(user_pass.photo_URL)
-        img = Image.open(BytesIO(response.content))
-        img = img.resize((113, 150), Image.ANTIALIAS)
+        try:
+            # Add user photo with different device resolution support
+            response = requests.get(user_pass.photo_URL)
+            img = Image.open(BytesIO(response.content))
+        except:
+            # Include default identification photo
+            img = Image.open('base.pass/thumbnail.png')
+        
+        img = img.resize((113, 150))
         hero_image = Image.new(img.mode, (600, 200), (128, 20, 41))
         hero_image.paste(img, (450, 25))
 
